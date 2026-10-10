@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Connection testing
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+
+    // User profiles & private perimeters
+    match /users/{userId} {
+      allow read, write: if true;
+
+      match /perimeters/{perimeterId} {
+        allow read, write: if true;
+      }
+    }
+
+    // Community published perimeters
+    match /published_perimeters/{publishedId} {
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if true;
+    }
+  }
+}

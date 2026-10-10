@@ -13,8 +13,7 @@ import {
   Plane,
   Sparkles,
   CheckCircle2,
-  ExternalLink,
-  Layers,
+  Globe,
   HelpCircle,
   X
 } from 'lucide-react';
@@ -26,10 +25,17 @@ import { AirportBlueprint } from './components/AirportBlueprint';
 import { PolicyRiskReport } from './components/PolicyRiskReport';
 import { CustomsInspector } from './components/CustomsInspector';
 import { TerraformViewer } from './components/TerraformViewer';
+import { LoginPage } from './components/LoginPage';
+import { PublishModal } from './components/PublishModal';
+import { CommunityRoster } from './components/CommunityRoster';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { saveUserPerimeter } from './lib/firebase';
 
 const STORAGE_KEY = 'aerosc_active_perimeter_v1';
 
-export default function App() {
+function AppContent() {
+  const { user } = useAuth();
+
   // Load initial config from LocalStorage or fallback to template 0
   const [config, setConfig] = useState<PerimeterConfig>(() => {
     try {
@@ -43,20 +49,29 @@ export default function App() {
     return TEMPLATES[0];
   });
 
-  const [activeTab, setActiveTab] = useState<'blueprint' | 'policies' | 'inspector' | 'terraform'>('blueprint');
+  const [activeTab, setActiveTab] = useState<'blueprint' | 'policies' | 'inspector' | 'terraform' | 'roster'>('blueprint');
   const [isActivating, setIsActivating] = useState(false);
   const [savedNotification, setSavedNotification] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showMetaphorGuide, setShowMetaphorGuide] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isPublishOpen, setIsPublishOpen] = useState(false);
 
   // Auto-save to LocalStorage whenever config changes
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     } catch (e) {
-      console.warn('Failed to auto-save:', e);
+      console.warn('Failed to auto-save to localStorage:', e);
     }
-  }, [config]);
+
+    // Also auto-save to Firestore if signed in
+    if (user && !user.isAnonymous) {
+      saveUserPerimeter(user.uid, config).catch((err) =>
+        console.warn('Failed to sync to Firestore:', err)
+      );
+    }
+  }, [config, user]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -106,14 +121,20 @@ export default function App() {
   };
 
   // Explicit Save
-  const handleSaveToStorage = () => {
+  const handleSaveToStorage = async () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      if (user && !user.isAnonymous) {
+        await saveUserPerimeter(user.uid, config);
+        showToast('Flight plan saved to local cache and Firestore cloud!');
+      } else {
+        showToast('Flight plan saved to browser storage!');
+      }
       setSavedNotification(true);
-      showToast('Flight plan successfully saved to browser storage!');
       setTimeout(() => setSavedNotification(false), 2000);
     } catch (e) {
       console.error(e);
+      showToast('Saved to browser storage');
     }
   };
 
@@ -166,7 +187,6 @@ export default function App() {
   const handleActivatePerimeter = () => {
     setIsActivating(true);
 
-    // Trigger upbeat celebratory confetti
     confetti({
       particleCount: 80,
       spread: 70,
@@ -233,6 +253,13 @@ export default function App() {
     showToast(`Quick-Fix Applied: Boarding pass granted to ${fix.ipToAdd || fix.identityToAdd}!`);
   };
 
+  // Load a community-published blueprint
+  const handleLoadCommunityBlueprint = (blueprint: PerimeterConfig) => {
+    setConfig(blueprint);
+    setActiveTab('blueprint');
+    showToast(`Loaded "${blueprint.name}" into Flight Planner!`);
+  };
+
   return (
     <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col selection:bg-cyan-500/30 selection:text-cyan-200">
       {/* Top Header */}
@@ -246,6 +273,8 @@ export default function App() {
         onImportJson={handleImportJson}
         onToggleEnforcement={handleToggleEnforcement}
         savedNotification={savedNotification}
+        onOpenLogin={() => setIsLoginOpen(true)}
+        onOpenPublish={() => setIsPublishOpen(true)}
       />
 
       {/* Main Split-Panel Content */}
@@ -320,6 +349,20 @@ export default function App() {
                 <FileCode className="w-4 h-4 text-indigo-400" />
                 <span>Terraform Flight Manifest</span>
               </button>
+
+              {/* Community Flight Roster Tab */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('roster')}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  activeTab === 'roster'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm shadow-emerald-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                }`}
+              >
+                <Globe className="w-4 h-4 text-emerald-400" />
+                <span>Community Flight Roster</span>
+              </button>
             </div>
 
             {/* Metaphor Guide Helper Pill */}
@@ -341,9 +384,36 @@ export default function App() {
               <CustomsInspector config={config} onApplyFix={handleApplyFix} />
             )}
             {activeTab === 'terraform' && <TerraformViewer config={config} />}
+            {activeTab === 'roster' && (
+              <CommunityRoster
+                onLoadBlueprint={handleLoadCommunityBlueprint}
+                onOpenPublish={() => setIsPublishOpen(true)}
+              />
+            )}
           </div>
         </div>
       </div>
+
+      {/* Login Modal */}
+      {isLoginOpen && (
+        <LoginPage isModal onClose={() => setIsLoginOpen(false)} />
+      )}
+
+      {/* Publish Modal */}
+      {isPublishOpen && (
+        <PublishModal
+          config={config}
+          onClose={() => setIsPublishOpen(false)}
+          onPublishedSuccess={(id) => {
+            showToast('Flight blueprint successfully published to Community Roster!');
+            setActiveTab('roster');
+          }}
+          onOpenLogin={() => {
+            setIsPublishOpen(false);
+            setIsLoginOpen(true);
+          }}
+        />
+      )}
 
       {/* Airport Metaphor Guide Modal */}
       {showMetaphorGuide && (
@@ -455,5 +525,13 @@ export default function App() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

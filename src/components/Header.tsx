@@ -10,10 +10,15 @@ import {
   RotateCcw,
   PlusCircle,
   Save,
-  Check
+  Check,
+  User,
+  LogOut,
+  Send,
+  Globe
 } from 'lucide-react';
 import { PerimeterConfig } from '../types/perimeter';
 import { TEMPLATES } from '../data/templates';
+import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   currentConfig: PerimeterConfig;
@@ -25,6 +30,8 @@ interface HeaderProps {
   onImportJson: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onToggleEnforcement: () => void;
   savedNotification: boolean;
+  onOpenLogin: () => void;
+  onOpenPublish: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,9 +43,12 @@ export const Header: React.FC<HeaderProps> = ({
   onExportJson,
   onImportJson,
   onToggleEnforcement,
-  savedNotification
+  savedNotification,
+  onOpenLogin,
+  onOpenPublish
 }) => {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const { user, logout } = useAuth();
 
   const isEnforced = currentConfig.enforcementMode === 'ENFORCED';
 
@@ -135,10 +145,21 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Save to LocalStorage */}
+          {/* Publish to Community Button */}
+          <button
+            type="button"
+            onClick={onOpenPublish}
+            title="Publish this flight plan to the Community Roster"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-teal-500/20 to-sky-500/20 hover:from-teal-500/30 hover:to-sky-500/30 text-teal-200 border border-teal-500/40 text-xs font-bold transition-all shadow-sm active:scale-95"
+          >
+            <Send className="w-3.5 h-3.5 text-teal-400" />
+            <span className="hidden sm:inline">Publish</span>
+          </button>
+
+          {/* Save to LocalStorage / Firestore */}
           <button
             onClick={onSaveToStorage}
-            title="Save Flight Plan to browser storage"
+            title="Save Flight Plan to browser & cloud storage"
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-sky-950/60 hover:bg-sky-900/60 text-sky-200 border border-sky-800/50 text-xs font-medium transition-all shadow-sm"
           >
             {savedNotification ? (
@@ -196,6 +217,45 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <PlusCircle className="w-3.5 h-3.5" />
           </button>
+
+          {/* Auth / Pilot Badge */}
+          <div className="pl-1 border-l border-slate-800">
+            {user ? (
+              <div className="flex items-center gap-1.5 bg-slate-900/90 border border-sky-800/40 rounded-xl px-2.5 py-1 text-xs">
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="Pilot"
+                    className="w-5 h-5 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-5 h-5 rounded-full bg-teal-500/20 text-teal-300 flex items-center justify-center font-bold text-[10px]">
+                    {user.displayName?.[0] || user.email?.[0]?.toUpperCase() || 'P'}
+                  </div>
+                )}
+                <span className="text-slate-200 font-semibold max-w-[100px] truncate hidden md:inline">
+                  {user.displayName || user.email?.split('@')[0] || 'Pilot'}
+                </span>
+                <button
+                  type="button"
+                  onClick={logout}
+                  title="Sign out of flight deck"
+                  className="text-slate-500 hover:text-rose-400 p-0.5 ml-0.5 transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-bold text-xs shadow-sm shadow-sky-500/20 transition-all active:scale-95"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Pilot Login</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </header>

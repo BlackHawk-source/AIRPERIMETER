@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information and settings",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "callsign": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "PerimeterBlueprint": {
+      "title": "PerimeterBlueprint",
+      "description": "Custom saved VPC SC perimeter architecture",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "enforcementMode": { "type": "string", "enum": ["ENFORCED", "DRY_RUN"] },
+        "projects": { "type": "array" },
+        "restrictedServices": { "type": "array" },
+        "ingressRules": { "type": "array" },
+        "egressRules": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "ownerId", "name", "enforcementMode"]
+    },
+    "PublishedPerimeter": {
+      "title": "PublishedPerimeter",
+      "description": "Publicly shared flight architecture accessible to community",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorEmail": { "type": "string" },
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "enforcementMode": { "type": "string", "enum": ["ENFORCED", "DRY_RUN"] },
+        "projects": { "type": "array" },
+        "restrictedServices": { "type": "array" },
+        "ingressRules": { "type": "array" },
+        "egressRules": { "type": "array" },
+        "stars": { "type": "number" },
+        "publishedAt": { "type": "string" }
+      },
+      "required": ["id", "authorId", "authorName", "name"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile document"
+    },
+    "/users/{userId}/perimeters/{perimeterId}": {
+      "schema": { "$ref": "#/entities/PerimeterBlueprint" },
+      "description": "Private flight blueprints belonging to the user"
+    },
+    "/published_perimeters/{publishedId}": {
+      "schema": { "$ref": "#/entities/PublishedPerimeter" },
+      "description": "Publicly published airport architectures readable by anyone"
+    }
+  }
+}
