@@ -1,0 +1,6 @@
+{
+  "name": "AeroSC: Airport Security VPC Architect",
+  "description": "Design, visualize, troubleshoot, and deploy Google Cloud VPC Service Controls using an intuitive airport security checkpoint metaphor.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
